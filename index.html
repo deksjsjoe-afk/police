@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ลงทะเบียนประชุมประจำเดือน</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chonburi&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.47.0/iconfont/tabler-icons.min.css">
+<style>
+  * { box-sizing: border-box; }
+  :root {
+    --navy: #16324f;
+    --navy-deep: #0d2036;
+    --gold: #b8892b;
+    --gold-light: #e8d5ab;
+    --cream: #faf7f0;
+    --paper: #ffffff;
+    --ink: #1c2430;
+    --ink-soft: #5b6472;
+    --line: #e4ddcd;
+    --stamp-red: #a4342a;
+    --ok-green: #2f7d4f;
+    --ok-green-bg: #e7f3ea;
+  }
+  body { margin: 0; }
+  .wrap {
+    font-family: 'Sarabun', sans-serif;
+    background: var(--cream);
+    color: var(--ink);
+    max-width: 620px;
+    margin: 0 auto;
+    padding: 0 0 3rem;
+  }
+  .header {
+    background: linear-gradient(180deg, var(--navy) 0%, var(--navy-deep) 100%);
+    color: #f6f1e4;
+    padding: 2rem 1.5rem 1.75rem;
+    border-radius: 0 0 20px 20px;
+    text-align: center;
+    position: relative;
+  }
+  .header .badge {
+    width: 56px; height: 56px;
+    margin: 0 auto 0.75rem;
+    border: 2px solid var(--gold);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Chonburi', serif;
+    font-size: 22px;
+    color: var(--gold-light);
+  }
+  .header h1 {
+    font-family: 'Chonburi', serif;
+    font-size: 21px;
+    font-weight: 400;
+    margin: 0 0 0.35rem;
+    letter-spacing: 0.3px;
+  }
+  .header p { margin: 0.15rem 0; font-size: 14px; color: #cfd8e3; }
+  .header .meta {
+    margin-top: 0.9rem;
+    display: flex; flex-direction: column; gap: 4px;
+    font-size: 13.5px; color: var(--gold-light);
+  }
+
+  .card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    margin: 1.1rem 1.25rem 0;
+    padding: 1.1rem 1.2rem;
+  }
+  .card h2 {
+    font-size: 14px; font-weight: 600; margin: 0 0 0.7rem;
+    color: var(--navy);
+  }
+
+  .search-box { position: relative; }
+  .search-box input {
+    width: 100%;
+    font-family: 'Sarabun', sans-serif;
+    font-size: 15px;
+    padding: 11px 14px;
+    border: 1.5px solid var(--line);
+    border-radius: 10px;
+    outline: none;
+    background: #fffdf9;
+  }
+  .search-box input:focus { border-color: var(--gold); }
+  .suggestions {
+    position: absolute; left: 0; right: 0; top: calc(100% + 4px);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    max-height: 260px; overflow-y: auto;
+    z-index: 5;
+    box-shadow: 0 6px 18px rgba(22,50,79,0.12);
+    display: none;
+  }
+  .suggestions.show { display: block; }
+  .sugg-item {
+    padding: 9px 14px;
+    font-size: 14px;
+    cursor: pointer;
+    border-bottom: 1px solid #f1ede2;
+    display: flex; justify-content: space-between; gap: 8px;
+  }
+  .sugg-item:last-child { border-bottom: none; }
+  .sugg-item:hover, .sugg-item.active { background: #f7f1e0; }
+  .sugg-item .nm { color: var(--ink); }
+  .sugg-item .rk { color: var(--ink-soft); font-size: 12.5px; white-space: nowrap; flex-shrink: 0; }
+
+  .selected-panel { margin-top: 1rem; display: none; }
+  .selected-panel.show { display: block; }
+  .sel-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 14px; border-bottom: 1px dashed #eee1c2; }
+  .sel-row:last-of-type { border-bottom: none; }
+  .sel-row .k { color: var(--ink-soft); }
+  .sel-row .v { font-weight: 500; text-align: right; }
+
+  .sign-btn {
+    width: 100%;
+    margin-top: 1rem;
+    padding: 13px;
+    font-family: 'Sarabun', sans-serif;
+    font-size: 15.5px;
+    font-weight: 600;
+    color: #fff;
+    background: var(--navy);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: transform 0.12s ease, background 0.15s ease;
+  }
+  .sign-btn:active { transform: scale(0.98); }
+  .sign-btn:disabled { background: #b9b2a0; cursor: default; }
+
+  .stamp-flash {
+    position: relative;
+    text-align: center;
+    margin-top: 0.85rem;
+    min-height: 0;
+  }
+  .stamp {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 76px; height: 76px;
+    border: 3px solid var(--stamp-red);
+    border-radius: 50%;
+    color: var(--stamp-red);
+    font-family: 'Chonburi', serif;
+    font-size: 12px;
+    transform: scale(0) rotate(-18deg);
+    opacity: 0;
+  }
+  .stamp.pop {
+    animation: stampIn 0.42s cubic-bezier(.2,1.4,.4,1) forwards;
+  }
+  @keyframes stampIn {
+    0% { transform: scale(2.2) rotate(-18deg); opacity: 0; }
+    55% { transform: scale(0.92) rotate(-18deg); opacity: 1; }
+    75% { transform: scale(1.08) rotate(-18deg); }
+    100% { transform: scale(1) rotate(-18deg); opacity: 1; }
+  }
+
+  .progress-wrap { margin: 0 1.25rem 0; }
+  .progress-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 1.1rem 0 0.5rem;
+  }
+  .progress-head .num { font-size: 26px; font-weight: 600; color: var(--navy); }
+  .progress-head .lbl { font-size: 13px; color: var(--ink-soft); }
+  .bar-track {
+    height: 8px; background: #ece5d3; border-radius: 6px; overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%; background: linear-gradient(90deg, var(--gold) 0%, var(--navy) 130%);
+    border-radius: 6px; transition: width 0.4s ease;
+  }
+
+  .list-card { margin: 0.9rem 1.25rem 0; }
+  .list-card h2 { display: flex; align-items: center; gap: 6px; }
+  .att-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid #f1ede2;
+    font-size: 13.8px;
+  }
+  .att-row:last-child { border-bottom: none; }
+  .att-row .chk {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--ok-green-bg); color: var(--ok-green);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; flex-shrink: 0;
+  }
+  .att-row .nm { flex: 1; }
+  .att-row .tm { color: var(--ink-soft); font-size: 12px; white-space: nowrap; }
+  .empty-note { color: var(--ink-soft); font-size: 13.5px; padding: 6px 0; }
+
+  .undo-link {
+    display: block; text-align: center; margin-top: 0.7rem;
+    font-size: 12.5px; color: var(--ink-soft); text-decoration: underline; cursor: pointer;
+  }
+
+  .browse-toggle {
+    display: flex; align-items: center; gap: 6px; justify-content: center;
+    margin-top: 0.85rem;
+    font-size: 13.5px; color: var(--navy);
+    cursor: pointer; user-select: none;
+  }
+  .browse-toggle i { font-size: 16px; transition: transform 0.2s ease; }
+  .browse-toggle.open i { transform: rotate(180deg); }
+
+  .browse-panel { display: none; margin-top: 0.75rem; }
+  .browse-panel.show { display: block; }
+
+  .browse-tabs { display: flex; gap: 8px; margin-bottom: 0.6rem; }
+  .tab-btn {
+    flex: 1;
+    font-family: 'Sarabun', sans-serif;
+    font-size: 13px; font-weight: 500;
+    padding: 8px 6px;
+    border: 1.5px solid var(--line);
+    background: #fffdf9;
+    color: var(--ink-soft);
+    border-radius: 9px;
+    cursor: pointer;
+  }
+  .tab-btn.active { border-color: var(--navy); color: var(--navy); background: #eef2f6; }
+
+  .browse-list {
+    max-height: 260px; overflow-y: auto;
+    border: 1px solid var(--line); border-radius: 10px;
+  }
+  .browse-row {
+    display: flex; align-items: baseline; gap: 8px;
+    padding: 9px 12px;
+    font-size: 13.8px;
+    border-bottom: 1px solid #f1ede2;
+    cursor: pointer;
+  }
+  .browse-row:last-child { border-bottom: none; }
+  .browse-row:hover, .browse-row:active { background: #f7f1e0; }
+  .browse-row .bno { color: var(--ink-soft); font-size: 12px; width: 22px; flex-shrink: 0; }
+  .browse-row .brk { color: var(--ink-soft); font-size: 12.5px; white-space: nowrap; flex-shrink: 0; }
+  .browse-row .bnm { flex: 1; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <div class="badge">ขค</div>
+    <h1>สถานีตำรวจภูธรเขาค้อ</h1>
+    <p>ลงทะเบียนเข้าร่วมการประชุมประจำเดือน สิงหาคม 2569</p>
+    <div class="meta">
+      <span>วันพฤหัสบดีที่ 6 สิงหาคม 2569 &nbsp;·&nbsp; เวลา 13.00 น.</span>
+      <span>ห้องประชุม ศปก.สภ.เขาค้อ</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>ค้นหารายชื่อของท่าน</h2>
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="พิมพ์ชื่อหรือยศ เช่น วิชา, ร.ต.ต." autocomplete="off">
+      <div class="suggestions" id="suggestions"></div>
+    </div>
+
+    <div class="browse-toggle" id="browseToggle">
+      <i class="ti ti-chevron-down" id="browseChevron" aria-hidden="true"></i>
+      หรือเลื่อนหารายชื่อทั้งหมด
+    </div>
+    <div class="browse-panel" id="browsePanel">
+      <div class="browse-tabs">
+        <button class="tab-btn active" data-group="officer" type="button">นายทหารสัญญาบัตร</button>
+        <button class="tab-btn" data-group="nco" type="button">ชั้นประทวน</button>
+      </div>
+      <div class="browse-list" id="browseList"></div>
+    </div>
+
+    <div class="selected-panel" id="selPanel">
+      <div class="sel-row"><span class="k">ลำดับ</span><span class="v" id="selNo"></span></div>
+      <div class="sel-row"><span class="k">ยศ</span><span class="v" id="selRank"></span></div>
+      <div class="sel-row"><span class="k">ชื่อ - สกุล</span><span class="v" id="selName"></span></div>
+      <div class="sel-row"><span class="k">ตำแหน่ง</span><span class="v" id="selPos"></span></div>
+      <div class="sel-row"><span class="k">นามเรียกขาน</span><span class="v" id="selCall"></span></div>
+      <button class="sign-btn" id="signBtn">ลงชื่อเข้าร่วมประชุม</button>
+      <div class="stamp-flash" id="stampFlash"></div>
+      <span class="undo-link" id="undoLink" style="display:none;">ยกเลิกการลงชื่อของฉัน</span>
+    </div>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-head">
+      <div><span class="num" id="countNum">0</span><span class="lbl"> / 76 นาย ลงทะเบียนแล้ว</span></div>
+    </div>
+    <div class="bar-track"><div class="bar-fill" id="barFill" style="width:0%"></div></div>
+  </div>
+
+  <div class="card list-card">
+    <h2>รายชื่อผู้ลงทะเบียนแล้ว</h2>
+    <div id="attList"><div class="empty-note">ยังไม่มีผู้ลงทะเบียน</div></div>
+    <button class="sign-btn" id="exportBtn" style="margin-top:1rem; background:var(--gold);">ดาวน์โหลดรายชื่อ (CSV)</button>
+  </div>
+
+</div>
+
+<script>
+/* =====================================================================
+   ตั้งค่า Google Apps Script Web App URL ตรงนี้
+   (ได้จากขั้นตอน Deploy > New deployment > Web app ใน Apps Script)
+   ===================================================================== */
+const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwkg294Ot3cLzHPKOhRZoCN-jtQl-Jsx5oC6YD6DbeH8FV6akGx9VQU9GC6evko8lYx/exec";
+/* ===================================================================== */
+
+
+const OFFICERS = [
+["1","พ.ต.อ.","บุญถึง เหมือนแสง","ผกก.สภ.เขาค้อ","เขาค้อ ๑"],
+["2","พ.ต.ท.","ทรงกรต เมฆพัฒน์","รอง ผกก.(สอบสวน)ฯ","เขาค้อ ๓"],
+["3","พ.ต.ท.","ประกิจ มีคำ","รอง ผกก.ป.สภ.เขาค้อ","เขาค้อ ๒"],
+["4","พ.ต.ท.","ชูชาติ วรรณะ","รอง ผกก.สส.ฯ","เขาค้อ ๔"],
+["5","พ.ต.ท.","วันชัย สีหะสิงห์","สว.(สอบสวน)","เขาค้อ ๓๑"],
+["6","พ.ต.ท.","สมบัติ ปูนกลาง","สวป.สภ.เขาค้อ","เขาค้อ ๒๑"],
+["7","พ.ต.ท.","ปราโมทย์ บรรจงทอง","สว.สส.สภ.เขาค้อ","เขาค้อ ๔๑"],
+["8","พ.ต.ท.หญิง","อัญพัชญ์ นิธิโรจน์ธัญการ","สว.อก.สภ.เขาค้อ","เขาค้อ ๕"],
+["9","ร.ต.อ.","คำแสง ไชโย","รอง สวป.ฯ","เขาค้อ ๒๑๑"],
+["10","ร.ต.อ.","วิเชียร หุมมา","รอง สว.(สอบสวน)ฯ","เขาค้อ ๓๑๑"],
+["11","ร.ต.อ.","ดิษนีย์ วัฒนคุ้ม","รอง สว.ธร.ฯ","เขาค้อ ๕๑"],
+["12","ร.ต.ท.หญิง","ธนาพร จันทร์ทองอุ่น","รอง สว.(สอบสวน)ฯ","เขาค้อ ๓๑๒"],
+["13","ร.ต.อ.","สิงขร กองสิงห์","รอง สวป.ฯ","เขาค้อ ๒๑๒"],
+["14","ร.ต.ท.","ถิรธนา ศรีมังกร","รอง สว.(ป.)ฯ","เขาค้อ ๒๑๓"],
+["15","ร.ต.ท.","เกษตร ศรีวงศ์","รอง สว.(สส.)ฯ","เขาค้อ ๔๑๑"],
+["16","ร.ต.ท.","คามภ์ พลเยี่ยม","รอง สว.(ป.)ฯ","เขาค้อ ๒๑๔"],
+["17","ร.ต.ท.","จรูญ อินเอี่ยม","รอง สว.(ป.)ฯ","เขาค้อ ๒๑๕"],
+["18","ร.ต.ท.","ประวิช ผิวยะกา","รอง สว.(ป.)ฯ","เขาค้อ ๕๒"],
+["19","ร.ต.ท.","นรินทร์ ศรีมรกตมงคล","รอง สว.(สส.)ฯ","เขาค้อ ๒๑๖"],
+["20","ร.ต.ต.","ศักดิ์ศิรินทร์ กางถิ่น","รอง สว.(ป.)ฯ","เขาค้อ ๒๑๗"],
+["21","ร.ต.ต.","ชัยนาฤทธิ์ คนหาญ","รอง สว.(ป.)ฯ","เขาค้อ ๒๑๘"],
+["22","ร.ต.ต.","ชยพล มีแสงแก้ว","รอง สว.(สส.)ฯ","เขาค้อ ๔๑๒"],
+["23","ร.ต.ต.","พิสิษฐ์ บุสดี","รอง สว.(ป.)ฯ","เขาค้อ ๕๓"],
+["24","ร.ต.ต.","สมพร สาลีศรี","รอง สว.(ป.)ฯ","เขาค้อ ๕๔"],
+["25","ร.ต.ต.","ปัญญา กิ่งจันทร์","รอง สว.(ป.)ฯ","เขาค้อ ๒๒๐"],
+["26","ร.ต.ต.","ศักดิ์ดา พิมพ์สวัสดิ์","รอง สว.(ป.)ฯ","เขาค้อ ๒๑๙"],
+["27","ร.ต.ต.","วิธิตพงษ์ กิตติวีระ","รอง สว.(ป.)ฯ","เขาค้อ ๒๒๑"],
+["28","ร.ต.ต.","ฉัตรชัย รัศมีจันทรางค์","รอง สว.(สส.)ฯ","เขาค้อ ๔๑๓"],
+["29","ร.ต.ต.","เดชาพัชร ตาแล","รอง สว.(ป.)ฯ","เขาค้อ ๒๒๒"],
+["30","ร.ต.ต.","วิชา อยู่นวล","รอง สว.(ป.)ฯ","เขาค้อ ๖๑๑"],
+["31","ร.ต.ต.","ศิระ ไตยนำ","รอง สว.(ป.)ฯ","เขาค้อ ๒๒๓"],
+["32","ด.ต.","สมศักดิ์ บุญเกิด","ผบ.หมู่(สส.) สภ.เขาค้อ","เขาค้อ ๔๑๑๒"],
+["33","ด.ต.","สุวิทย์ เคล้าโนนคร้อ","ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๔๑๑๑"],
+["34","ด.ต.","บุญส่ง วิเศษโชค","ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๒๑๑๑"],
+["35","ด.ต.","วชิระ รอดแตง","ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๒๑๑๒"],
+["36","ด.ต.","ลินล่า สุจิมงคล","ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๒๑๑๓"],
+["37","ด.ต.","กวีวัธน์ บุญคง","ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๒๑๑๖"],
+["38","ด.ต.","ชุติพนธ์ ทองนาค","ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๒๑๑๕"],
+["39","ด.ต.","ประเสริฐ ทิศพรม","ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๒๑๑๔"],
+["40","ด.ต.","จิตชนพันธ์ โฉมอุปฮาด","ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๕๑๑"],
+["41","ด.ต.","สุรศักดิ์ เทียบรัตน์","ผบ.หมู่(สส.) สภ.เขาค้อ","เขาค้อ ๔๑๑๓"],
+["42","ด.ต.","ประเสริฐ สระทองเมือง","ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๒๑๑๗"],
+["43","ด.ต.","อนุพงษ์ ประมวล","ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๕๑๒"],
+["44","จ.ส.ต.","ภัทรพล แสนแก้ว","ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๓๑๑๑"],
+["45","ด.ต.","ณัฐวุฒิ ศรีจันทร์","ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๕๑๓"],
+["46","จ.ส.ต.หญิง","อรนาถ มหาพรมวัน","ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๕๑๔"],
+["47","จ.ส.ต.","ปราโมทย์ อินทมงคล","ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๒๑๑๘"],
+["48","จ.ส.ต.","ชัยเทพ ปรีชาพานิช","ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๒๑๑๙"],
+["49","จ.ส.ต.","ศุภกร ธรรมวงษ์","ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๒๑๒๐"],
+["50","จ.ส.ต.","เฉลิมชัย อ่อนศรี","ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๓๑๑๒"],
+["51","ส.ต.อ.","ก้องเกียรติ ทองฉอ้อน","ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๔๑๑๔"],
+["52","ส.ต.อ.","ตรีพิทักษ์ ล้อมพิทักษ์","ผบ.หมู่(ผช.พงส.) สภ.เขาค้อ","เขาค้อ ๖๑๑๑"],
+["53","ส.ต.อ.","นัฐพงษ์ เรืองรัตน์","ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๒๑๒๑"],
+["54","ส.ต.อ.","ฉัตรชัย แก้วมณี","ผบ.หมู่(สส.) สภ.เขาค้อ","เขาค้อ ๔๑๑๕"],
+["55","ส.ต.อ.","อิศรานนท์ ค่อนสอาด","ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๖๑๑๒"],
+["56","ส.ต.อ.","จิรวัฒน์ เสริฐผล","ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๔๑๑๖"],
+["57","ส.ต.อ.","สินไพบูลย์ สุดหอม","ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๕๑๕"],
+["58","ส.ต.อ.หญิง","รดา อินขุนทิพย์","ผบ.หมู่(ผช.พงส.) สภ.เขาค้อ","เขาค้อ ๓๑๑๕"],
+["59","ส.ต.ท.","กลวัชร บัวจันทร์","ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๒๑๒๔"],
+["60","ส.ต.ท.","อุกฤษฎ์ สายคำพวน","ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๒๑๒๒"],
+["61","ส.ต.ท.","ธนโชติ ทองสุก","ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๓๑๑๔"],
+["62","ส.ต.ท.","ปฏิพาณ ทองแพง","ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๒๑๒๓"],
+["63","ส.ต.ท.","อลัน นิรันดร","ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๓๑๑๓"],
+["64","ส.ต.ท.","ธนกร ทับทอง","ผบ.หมู่(ผช.พงส.) สภ.เขาค้อ","เขาค้อ ๓๑๑๖"],
+["65","ส.ต.ท.","อภิสิทธิ์ ไวเกิด","ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๓๑๑๗"],
+["66","ส.ต.ท.","พงศกร ศรีสายคำ","ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๒๑๒๕"],
+["67","ส.ต.ท.","ณรงค์ ฉ่ำผล","รรท.ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๒๑๓๒"],
+["68","ส.ต.ท.","พีระพงศ์ หาพา","ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๒๑๒๖"],
+["69","ส.ต.ท.","อนุวัฒน์ ชาววิวัฒน์","ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๒๑๒๗"],
+["70","ส.ต.ท.","เสกสรร ผุยเพชร","ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๒๑๒๘"],
+["71","ส.ต.ท.","วสุพล ผลจันทร์","ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๒๑๒๙"],
+["72","ส.ต.ท.","อาคม มาราช","ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๖๑๑๓"],
+["73","ส.ต.ต.","ปิยะพงษ์ เสาธง","ผบ.หมู่(ผช.พงส.) สภ.เขาค้อ","เขาค้อ ๒๑๓๐"],
+["74","ส.ต.ต.","วัศย์รุจ นันตา","ผบ.หมู่(ผช.พงส.) สภ.เขาค้อ","เขาค้อ ๓๑๑๘"],
+["75","ส.ต.ต.","ธนะชัย เอมเอี่ยม","ผบ.หมู่(ผช.พงส.) สภ.เขาค้อ","เขาค้อ ๒๑๓๑"],
+["76","ส.ต.ต.","วินัย ริศด้วง","ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๕๑๖"]
+];
+
+const EVENT_KEY = "meeting_2569_08";
+const isGasConfigured = GAS_WEB_APP_URL && GAS_WEB_APP_URL.startsWith('http');
+let currentRecords = {};
+
+const searchInput = document.getElementById('searchInput');
+const suggestions = document.getElementById('suggestions');
+const selPanel = document.getElementById('selPanel');
+const signBtn = document.getElementById('signBtn');
+const stampFlash = document.getElementById('stampFlash');
+const undoLink = document.getElementById('undoLink');
+const countNum = document.getElementById('countNum');
+const barFill = document.getElementById('barFill');
+const attList = document.getElementById('attList');
+
+let selected = null;
+let activeIdx = -1;
+let filtered = [];
+
+function renderSuggestions(list) {
+  suggestions.innerHTML = '';
+  if (list.length === 0) { suggestions.classList.remove('show'); return; }
+  list.slice(0, 8).forEach((o, i) => {
+    const div = document.createElement('div');
+    div.className = 'sugg-item' + (i === activeIdx ? ' active' : '');
+    div.innerHTML = '<span class="rk">' + o[1] + '</span><span class="nm">' + o[2] + '</span>';
+    div.onclick = () => selectOfficer(o);
+    suggestions.appendChild(div);
+  });
+  suggestions.classList.add('show');
+}
+
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.trim();
+  activeIdx = -1;
+  if (!q) { suggestions.classList.remove('show'); return; }
+  filtered = OFFICERS.filter(o => o[2].includes(q) || o[1].includes(q));
+  renderSuggestions(filtered);
+});
+
+searchInput.addEventListener('keydown', (e) => {
+  if (!suggestions.classList.contains('show')) return;
+  if (e.key === 'ArrowDown') { activeIdx = Math.min(activeIdx + 1, filtered.length - 1); renderSuggestions(filtered); e.preventDefault(); }
+  else if (e.key === 'ArrowUp') { activeIdx = Math.max(activeIdx - 1, 0); renderSuggestions(filtered); e.preventDefault(); }
+  else if (e.key === 'Enter' && activeIdx >= 0) { selectOfficer(filtered[activeIdx]); e.preventDefault(); }
+});
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.search-box')) suggestions.classList.remove('show');
+});
+
+const OFFICER_RANK_PREFIXES = ['พ.', 'ร.'];
+function isOfficerRank(rank) {
+  return OFFICER_RANK_PREFIXES.some(p => rank.startsWith(p));
+}
+
+const browseToggle = document.getElementById('browseToggle');
+const browseChevron = document.getElementById('browseChevron');
+const browsePanel = document.getElementById('browsePanel');
+const browseList = document.getElementById('browseList');
+const tabBtns = document.querySelectorAll('.tab-btn');
+let currentGroup = 'officer';
+
+browseToggle.addEventListener('click', () => {
+  const isOpen = browsePanel.classList.toggle('show');
+  browseToggle.classList.toggle('open', isOpen);
+  if (isOpen) renderBrowseList();
+});
+
+tabBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    tabBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentGroup = btn.dataset.group;
+    renderBrowseList();
+  });
+});
+
+function renderBrowseList() {
+  const list = OFFICERS.filter(o => currentGroup === 'officer' ? isOfficerRank(o[1]) : !isOfficerRank(o[1]));
+  browseList.innerHTML = list.map(o =>
+    '<div class="browse-row" data-no="' + o[0] + '"><span class="bno">' + o[0] + '</span><span class="brk">' + o[1] + '</span><span class="bnm">' + o[2] + '</span></div>'
+  ).join('');
+  browseList.querySelectorAll('.browse-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const o = OFFICERS.find(x => x[0] === row.dataset.no);
+      if (o) {
+        selectOfficer(o);
+        browsePanel.classList.remove('show');
+        browseToggle.classList.remove('open');
+        selPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+  });
+}
+
+function selectOfficer(o) {
+  selected = o;
+  searchInput.value = o[2];
+  suggestions.classList.remove('show');
+  document.getElementById('selNo').textContent = o[0];
+  document.getElementById('selRank').textContent = o[1];
+  document.getElementById('selName').textContent = o[2];
+  document.getElementById('selPos').textContent = o[3];
+  document.getElementById('selCall').textContent = o[4];
+  selPanel.classList.add('show');
+  stampFlash.innerHTML = '';
+  checkIfSigned(o[0]);
+}
+
+function checkIfSigned(no) {
+  const data = currentRecords[no];
+  if (data) {
+    signBtn.disabled = true;
+    signBtn.textContent = 'ลงชื่อแล้วเมื่อ ' + data.time;
+    undoLink.style.display = 'block';
+  } else {
+    signBtn.disabled = false;
+    signBtn.textContent = 'ลงชื่อเข้าร่วมประชุม';
+    undoLink.style.display = 'none';
+  }
+}
+
+signBtn.addEventListener('click', () => {
+  if (!selected) return;
+  if (!isGasConfigured) { signBtn.textContent = 'ยังไม่ได้ตั้งค่าระบบบันทึกข้อมูล (Google Sheet)'; return; }
+  const now = new Date();
+  const time = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+  const record = { action: 'sign', no: selected[0], rank: selected[1], name: selected[2], position: selected[3], callsign: selected[4], time };
+  signBtn.disabled = true;
+  signBtn.textContent = 'กำลังบันทึก...';
+  fetch(GAS_WEB_APP_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(record)
+  })
+    .then(() => {
+      signBtn.textContent = 'ลงชื่อแล้วเมื่อ ' + time;
+      undoLink.style.display = 'block';
+      stampFlash.innerHTML = '<span class="stamp pop">ลงชื่อ<br>แล้ว</span>';
+      currentRecords[selected[0]] = { no: selected[0], rank: selected[1], name: selected[2], position: selected[3], callsign: selected[4], time };
+      renderAttendance();
+      fetchAttendance();
+    })
+    .catch(() => {
+      signBtn.disabled = false;
+      signBtn.textContent = 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง';
+    });
+});
+
+undoLink.addEventListener('click', () => {
+  if (!selected || !isGasConfigured) return;
+  fetch(GAS_WEB_APP_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action: 'delete', no: selected[0] })
+  }).finally(() => {
+    signBtn.disabled = false;
+    signBtn.textContent = 'ลงชื่อเข้าร่วมประชุม';
+    undoLink.style.display = 'none';
+    stampFlash.innerHTML = '';
+    delete currentRecords[selected[0]];
+    renderAttendance();
+    fetchAttendance();
+  });
+});
+
+function renderAttendance() {
+  const records = Object.values(currentRecords).sort((a, b) => parseInt(a.no) - parseInt(b.no));
+  countNum.textContent = records.length;
+  barFill.style.width = Math.round((records.length / 76) * 100) + '%';
+  if (records.length === 0) {
+    attList.innerHTML = '<div class="empty-note">ยังไม่มีผู้ลงทะเบียน</div>';
+  } else {
+    attList.innerHTML = records.map(r =>
+      '<div class="att-row"><span class="chk">&#10003;</span><span class="nm">' + r.rank + ' ' + r.name + '</span><span class="tm">' + r.time + ' น.</span></div>'
+    ).join('');
+  }
+  if (selected) checkIfSigned(selected[0]);
+}
+
+/* ดึงข้อมูลจาก Google Sheet — โพลทุก 6 วินาทีเพื่อให้ทุกเครื่องเห็นรายชื่อใหม่ใกล้เคียงเรียลไทม์ */
+function fetchAttendance() {
+  if (!isGasConfigured) { renderAttendance(); return; }
+  fetch(GAS_WEB_APP_URL)
+    .then(r => r.json())
+    .then(records => {
+      currentRecords = {};
+      records.forEach(r => { if (r.no) currentRecords[r.no] = r; });
+      renderAttendance();
+    })
+    .catch(() => {});
+}
+
+fetchAttendance();
+if (isGasConfigured) setInterval(fetchAttendance, 6000);
+
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const records = Object.values(currentRecords).sort((a, b) => parseInt(a.no) - parseInt(b.no));
+  if (records.length === 0) { alert('ยังไม่มีข้อมูลให้ดาวน์โหลด'); return; }
+  let csv = '\uFEFFลำดับ,ยศ,ชื่อ - สกุล,ตำแหน่ง,นามเรียกขาน,เวลาลงชื่อ\n';
+  records.forEach(r => {
+    csv += [r.no, r.rank, r.name, r.position, r.callsign, r.time + ' น.'].map(v => '"' + String(v).replace(/"/g,'""') + '"').join(',') + '\n';
+  });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'รายชื่อผู้ลงทะเบียน_ประชุมสิงหาคม2569.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+</script>
+</body>
+</html>
