@@ -117,6 +117,7 @@
   .sel-row:last-of-type { border-bottom: none; }
   .sel-row .k { color: var(--ink-soft); }
   .sel-row .v { font-weight: 500; text-align: right; }
+  .privacy-note { font-size: 11.5px; color: var(--ink-soft); margin: 0.6rem 0 0; line-height: 1.5; }
 
   .sign-btn {
     width: 100%;
@@ -253,7 +254,7 @@
     <h1>สถานีตำรวจภูธรเขาค้อ</h1>
     <p>ลงทะเบียนเข้าร่วมการประชุมประจำเดือน สิงหาคม 2569</p>
     <div class="meta">
-      <span>วันพฤหัสบดีที่ 6 สิงหาคม 2569 &nbsp;·&nbsp; เวลา 13.00 น.</span>
+      <span>วันศุกร์ที่ 28 สิงหาคม 2569 &nbsp;·&nbsp; เวลา 10.00 น.</span>
       <span>ห้องประชุม ศปก.สภ.เขาค้อ</span>
     </div>
   </div>
@@ -283,6 +284,7 @@
       <div class="sel-row"><span class="k">ชื่อ - สกุล</span><span class="v" id="selName"></span></div>
       <div class="sel-row"><span class="k">ตำแหน่ง</span><span class="v" id="selPos"></span></div>
       <div class="sel-row"><span class="k">นามเรียกขาน</span><span class="v" id="selCall"></span></div>
+      <p class="privacy-note">ระบบจะบันทึกตำแหน่งที่ตั้ง (GPS) เพื่อยืนยันการเข้าร่วมประชุม</p>
       <button class="sign-btn" id="signBtn">ลงชื่อเข้าร่วมประชุม</button>
       <div class="stamp-flash" id="stampFlash"></div>
       <span class="undo-link" id="undoLink" style="display:none;">ยกเลิกการลงชื่อของฉัน</span>
@@ -309,9 +311,8 @@
    ตั้งค่า Google Apps Script Web App URL ตรงนี้
    (ได้จากขั้นตอน Deploy > New deployment > Web app ใน Apps Script)
    ===================================================================== */
-const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwkg294Ot3cLzHPKOhRZoCN-jtQl-Jsx5oC6YD6DbeH8FV6akGx9VQU9GC6evko8lYx/exec";
+const GAS_WEB_APP_URL = "ใส่ลิงก์ Web App ของคุณที่นี่";
 /* ===================================================================== */
-
 
 const OFFICERS = [
 ["1","พ.ต.อ.","บุญถึง เหมือนแสง","ผกก.สภ.เขาค้อ","เขาค้อ ๑"],
@@ -392,7 +393,7 @@ const OFFICERS = [
 ["76","ส.ต.ต.","วินัย ริศด้วง","ผบ.หมู่(ป.) สภ.เขาค้อ","เขาค้อ ๕๑๖"]
 ];
 
-const EVENT_KEY = "meeting_2569_08";
+const EVENT_KEY = "meeting_2569_08_28";
 const isGasConfigured = GAS_WEB_APP_URL && GAS_WEB_APP_URL.startsWith('http');
 let currentRecords = {};
 
@@ -514,31 +515,44 @@ function checkIfSigned(no) {
   }
 }
 
+function getClientLocation() {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) { resolve(''); return; }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve(pos.coords.latitude.toFixed(6) + ',' + pos.coords.longitude.toFixed(6)),
+      () => resolve(''),
+      { timeout: 6000 }
+    );
+  });
+}
+
 signBtn.addEventListener('click', () => {
   if (!selected) return;
   if (!isGasConfigured) { signBtn.textContent = 'ยังไม่ได้ตั้งค่าระบบบันทึกข้อมูล (Google Sheet)'; return; }
   const now = new Date();
   const time = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-  const record = { action: 'sign', no: selected[0], rank: selected[1], name: selected[2], position: selected[3], callsign: selected[4], time };
   signBtn.disabled = true;
   signBtn.textContent = 'กำลังบันทึก...';
-  fetch(GAS_WEB_APP_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(record)
-  })
-    .then(() => {
-      signBtn.textContent = 'ลงชื่อแล้วเมื่อ ' + time;
-      undoLink.style.display = 'block';
-      stampFlash.innerHTML = '<span class="stamp pop">ลงชื่อ<br>แล้ว</span>';
-      currentRecords[selected[0]] = { no: selected[0], rank: selected[1], name: selected[2], position: selected[3], callsign: selected[4], time };
-      renderAttendance();
-      fetchAttendance();
+  getClientLocation().then((location) => {
+    const record = { action: 'sign', no: selected[0], rank: selected[1], name: selected[2], position: selected[3], callsign: selected[4], time, location };
+    fetch(GAS_WEB_APP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(record)
     })
-    .catch(() => {
-      signBtn.disabled = false;
-      signBtn.textContent = 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง';
-    });
+      .then(() => {
+        signBtn.textContent = 'ลงชื่อแล้วเมื่อ ' + time;
+        undoLink.style.display = 'block';
+        stampFlash.innerHTML = '<span class="stamp pop">ลงชื่อ<br>แล้ว</span>';
+        currentRecords[selected[0]] = { no: selected[0], rank: selected[1], name: selected[2], position: selected[3], callsign: selected[4], time, location };
+        renderAttendance();
+        fetchAttendance();
+      })
+      .catch(() => {
+        signBtn.disabled = false;
+        signBtn.textContent = 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง';
+      });
+  });
 });
 
 undoLink.addEventListener('click', () => {
