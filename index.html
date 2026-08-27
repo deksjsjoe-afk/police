@@ -284,7 +284,6 @@
       <div class="sel-row"><span class="k">ชื่อ - สกุล</span><span class="v" id="selName"></span></div>
       <div class="sel-row"><span class="k">ตำแหน่ง</span><span class="v" id="selPos"></span></div>
       <div class="sel-row"><span class="k">นามเรียกขาน</span><span class="v" id="selCall"></span></div>
-      <p class="privacy-note">ระบบจะบันทึกตำแหน่งที่ตั้ง (GPS) เพื่อยืนยันการเข้าร่วมประชุม</p>
       <button class="sign-btn" id="signBtn">ลงชื่อเข้าร่วมประชุม</button>
       <div class="stamp-flash" id="stampFlash"></div>
       <span class="undo-link" id="undoLink" style="display:none;">ยกเลิกการลงชื่อของฉัน</span>
@@ -515,17 +514,6 @@ function checkIfSigned(no) {
   }
 }
 
-function getClientLocation() {
-  return new Promise((resolve) => {
-    if (!navigator.geolocation) { resolve(''); return; }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => resolve(pos.coords.latitude.toFixed(6) + ',' + pos.coords.longitude.toFixed(6)),
-      () => resolve(''),
-      { timeout: 6000 }
-    );
-  });
-}
-
 signBtn.addEventListener('click', () => {
   if (!selected) return;
   if (!isGasConfigured) { signBtn.textContent = 'ยังไม่ได้ตั้งค่าระบบบันทึกข้อมูล (Google Sheet)'; return; }
@@ -533,26 +521,24 @@ signBtn.addEventListener('click', () => {
   const time = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
   signBtn.disabled = true;
   signBtn.textContent = 'กำลังบันทึก...';
-  getClientLocation().then((location) => {
-    const record = { action: 'sign', no: selected[0], rank: selected[1], name: selected[2], position: selected[3], callsign: selected[4], time, location };
-    fetch(GAS_WEB_APP_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(record)
+  const record = { action: 'sign', no: selected[0], rank: selected[1], name: selected[2], position: selected[3], callsign: selected[4], time };
+  fetch(GAS_WEB_APP_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(record)
+  })
+    .then(() => {
+      signBtn.textContent = 'ลงชื่อแล้วเมื่อ ' + time;
+      undoLink.style.display = 'block';
+      stampFlash.innerHTML = '<span class="stamp pop">ลงชื่อ<br>แล้ว</span>';
+      currentRecords[selected[0]] = { no: selected[0], rank: selected[1], name: selected[2], position: selected[3], callsign: selected[4], time };
+      renderAttendance();
+      fetchAttendance();
     })
-      .then(() => {
-        signBtn.textContent = 'ลงชื่อแล้วเมื่อ ' + time;
-        undoLink.style.display = 'block';
-        stampFlash.innerHTML = '<span class="stamp pop">ลงชื่อ<br>แล้ว</span>';
-        currentRecords[selected[0]] = { no: selected[0], rank: selected[1], name: selected[2], position: selected[3], callsign: selected[4], time, location };
-        renderAttendance();
-        fetchAttendance();
-      })
-      .catch(() => {
-        signBtn.disabled = false;
-        signBtn.textContent = 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง';
-      });
-  });
+    .catch(() => {
+      signBtn.disabled = false;
+      signBtn.textContent = 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง';
+    });
 });
 
 undoLink.addEventListener('click', () => {
