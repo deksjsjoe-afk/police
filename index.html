@@ -283,6 +283,20 @@
   .rd-bar input[type=range] { width:100%; accent-color:var(--gold); }
   .rd-count { text-align:center; font-variant-numeric:tabular-nums; }
   @media (prefers-reduced-motion:reduce){ .rd-stage img { transition:none; } }
+
+  .scanner { position:fixed; inset:0; z-index:70; background:#0b1018; display:none; flex-direction:column; font-family:'Sarabun',sans-serif; color:#f6f1e4; }
+  .scanner.show { display:flex; }
+  .scan-top { padding:12px 16px; font-size:16px; font-weight:600; display:flex; justify-content:space-between; align-items:center; }
+  .scan-view { position:relative; flex:1; min-height:0; background:#000; overflow:hidden; }
+  .scan-view video { width:100%; height:100%; object-fit:cover; }
+  .scan-frame { position:absolute; left:50%; top:50%; width:min(70vw,320px); aspect-ratio:1; transform:translate(-50%,-50%); border:3px solid var(--gold); border-radius:18px; box-shadow:0 0 0 100vmax rgba(0,0,0,.45); }
+  .scan-msg { padding:10px 16px; text-align:center; font-size:14.5px; }
+  .scan-msg.err { color:#ffb4a8; }
+  .scan-bottom { padding:6px 16px calc(16px + env(safe-area-inset-bottom,0px)); display:flex; flex-direction:column; gap:10px; }
+  .scan-bottom form { display:flex; gap:8px; }
+  .scan-bottom input { flex:1; min-width:0; font-family:inherit; font-size:15px; padding:10px 12px; border-radius:9px; border:1px solid rgba(255,255,255,.3); background:rgba(255,255,255,.08); color:#fff; }
+  .scan-bottom button { font-family:inherit; font-size:14.5px; font-weight:600; border-radius:9px; padding:10px 14px; border:1px solid rgba(255,255,255,.35); background:transparent; color:#fff; cursor:pointer; }
+  .scan-bottom button.go { background:var(--gold); border-color:var(--gold); color:#1c1405; }
 </style>
 </head>
 <body>
@@ -325,9 +339,10 @@
       <div class="sel-row"><span class="k">ชื่อ - สกุล</span><span class="v" id="selName"></span></div>
       <div class="sel-row"><span class="k">ตำแหน่ง</span><span class="v" id="selPos"></span></div>
       <div class="sel-row"><span class="k">นามเรียกขาน</span><span class="v" id="selCall"></span></div>
-      <button class="sign-btn" id="signBtn">ลงชื่อเข้าร่วมประชุม</button>
+      <button class="sign-btn" id="signBtn">สแกน QR เช็กอิน</button>
+      <p class="privacy-note">เลือกชื่อของท่าน แล้วกดปุ่มเพื่อสแกน QR Code ที่แสดงในห้องประชุม</p>
       <div class="stamp-flash" id="stampFlash"></div>
-      <span class="undo-link" id="undoLink" style="display:none;">ยกเลิกการลงชื่อของฉัน</span>
+      <span class="undo-link" id="undoLink" style="display:none;">ยกเลิกการเช็กอินของฉัน</span>
     </div>
   </div>
 
@@ -388,6 +403,13 @@
   </div>
 </div>
 
+<div class="scanner" id="scanner" role="dialog" aria-label="สแกน QR เช็กอิน">
+  <div class="scan-top"><span>สแกน QR เช็กอิน</span><button type="button" id="scanCancel" style="font-family:inherit;border:1px solid rgba(255,255,255,.35);background:transparent;color:#fff;border-radius:8px;padding:6px 12px;cursor:pointer;">ปิด</button></div>
+  <div class="scan-view"><video id="scanVideo" playsinline muted></video><div class="scan-frame"></div></div>
+  <div class="scan-msg" id="scanMsg" role="status"></div>
+  <div class="scan-bottom"><form id="codeForm"><input id="codeInput" type="text" placeholder="สแกนไม่ได้? กรอกรหัสห้อง" autocomplete="off"><button class="go" type="submit">ยืนยัน</button></form></div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.min.js"></script>
 <div class="reader" id="reader" role="dialog" aria-label="เอกสารประกอบการประชุม">
   <div class="rd-top"><span class="ttl">เอกสารประกอบการประชุม 7 ต.ค. 2569</span><button class="rd-close" type="button" id="rdClose">ปิด</button></div>
   <div class="rd-stage" id="rdStage">
@@ -488,6 +510,7 @@ const OFFICERS = [
 ];
 
 const EVENT_KEY = "m1007"; // ใช้แยกรอบประชุม: เลขลำดับที่บันทึกลงชีตจะเป็น m1007_<ลำดับ>
+const BTN_LABEL = () => roomVerified ? 'เช็กอินเข้าร่วมประชุม' : 'สแกน QR เช็กอิน';
 const keyOf = n => EVENT_KEY + '_' + n;
 function fmtTime(t){
   if (t == null) return '';
@@ -608,16 +631,16 @@ function checkIfSigned(no) {
   const data = currentRecords[no];
   if (data) {
     signBtn.disabled = true;
-    signBtn.textContent = 'ลงชื่อแล้วเมื่อ ' + fmtTime(data.time);
+    signBtn.textContent = 'เช็กอินแล้วเมื่อ ' + fmtTime(data.time);
     undoLink.style.display = 'block';
   } else {
     signBtn.disabled = false;
-    signBtn.textContent = 'ลงชื่อเข้าร่วมประชุม';
+    signBtn.textContent = BTN_LABEL();
     undoLink.style.display = 'none';
   }
 }
 
-signBtn.addEventListener('click', () => {
+function doSign() {
   if (!selected) return;
   if (!isGasConfigured) { signBtn.textContent = 'ยังไม่ได้ตั้งค่าระบบบันทึกข้อมูล (Google Sheet)'; return; }
   const now = new Date();
@@ -631,9 +654,9 @@ signBtn.addEventListener('click', () => {
     body: JSON.stringify(record)
   })
     .then(() => {
-      signBtn.textContent = 'ลงชื่อแล้วเมื่อ ' + time;
+      signBtn.textContent = 'เช็กอินแล้วเมื่อ ' + time;
       undoLink.style.display = 'block';
-      stampFlash.innerHTML = '<span class="stamp pop">ลงชื่อ<br>แล้ว</span>';
+      stampFlash.innerHTML = '<span class="stamp pop">เช็กอิน<br>แล้ว</span>';
       currentRecords[selected[0]] = { no: selected[0], rank: selected[1], name: selected[2], position: selected[3], callsign: selected[4], time };
       renderAttendance();
       fetchAttendance();
@@ -642,7 +665,70 @@ signBtn.addEventListener('click', () => {
       signBtn.disabled = false;
       signBtn.textContent = 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง';
     });
+}
+/* ===== เช็กอินด้วยการสแกน QR ในห้องประชุม ===== */
+const CHECKIN_CODE = 'KKPS-m1007';   // รหัสที่ฝังใน QR ห้องประชุม (ต้องตรงกับแผ่น QR ที่ติดในห้อง)
+let roomVerified = false;
+try { if (location.hash.indexOf(CHECKIN_CODE) >= 0) roomVerified = true; } catch (e) {}
+const scanner = document.getElementById('scanner'), scanVideo = document.getElementById('scanVideo'), scanMsg = document.getElementById('scanMsg');
+let scanStream = null, scanRaf = 0, scanBusy = false;
+const scanCanvas = document.createElement('canvas'), scanCtx = scanCanvas.getContext('2d', { willReadFrequently: true });
+function codeOk(text) { return typeof text === 'string' && text.indexOf(CHECKIN_CODE) >= 0; }
+function stopScan() {
+  cancelAnimationFrame(scanRaf); scanBusy = false;
+  if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+  scanVideo.srcObject = null; scanner.classList.remove('show'); document.body.style.overflow = '';
+}
+function scanSuccess() { stopScan(); roomVerified = true; doSign(); }
+async function startScan() {
+  scanMsg.textContent = 'กำลังเปิดกล้อง...'; scanMsg.className = 'scan-msg';
+  scanner.classList.add('show'); document.body.style.overflow = 'hidden';
+  try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('nocam');
+    scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+    scanVideo.srcObject = scanStream; await scanVideo.play();
+  } catch (e) {
+    scanMsg.textContent = 'เปิดกล้องไม่ได้ กรุณาอนุญาตการใช้กล้อง หรือกรอกรหัสห้องด้านล่าง'; scanMsg.className = 'scan-msg err'; return;
+  }
+  scanMsg.textContent = 'เล็งกล้องไปที่ QR Code ในห้องประชุม';
+  const detector = ('BarcodeDetector' in window) ? new BarcodeDetector({ formats: ['qr_code'] }) : null;
+  const tick = async () => {
+    if (!scanStream) return;
+    if (scanVideo.readyState >= 2 && !scanBusy) {
+      scanBusy = true;
+      try {
+        let text = null;
+        if (detector) { const r = await detector.detect(scanVideo); if (r.length) text = r[0].rawValue; }
+        if (!text && window.jsQR) {
+          const w = scanVideo.videoWidth, h = scanVideo.videoHeight, k = Math.min(1, 640 / Math.max(w, h));
+          scanCanvas.width = Math.round(w * k); scanCanvas.height = Math.round(h * k);
+          scanCtx.drawImage(scanVideo, 0, 0, scanCanvas.width, scanCanvas.height);
+          const q = jsQR(scanCtx.getImageData(0, 0, scanCanvas.width, scanCanvas.height).data, scanCanvas.width, scanCanvas.height, { inversionAttempts: 'dontInvert' });
+          if (q) text = q.data;
+        }
+        if (text) {
+          if (codeOk(text)) { scanSuccess(); return; }
+          scanMsg.textContent = 'QR นี้ไม่ใช่ QR เช็กอินของห้องประชุม ลองสแกนใหม่'; scanMsg.className = 'scan-msg err';
+        }
+      } catch (e) {}
+      scanBusy = false;
+    }
+    scanRaf = requestAnimationFrame(tick);
+  };
+  scanRaf = requestAnimationFrame(tick);
+}
+signBtn.addEventListener('click', () => {
+  if (!selected) return;
+  if (roomVerified) doSign(); else startScan();
 });
+document.getElementById('scanCancel').addEventListener('click', stopScan);
+document.getElementById('codeForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const v = document.getElementById('codeInput').value.trim();
+  if (v && v.toLowerCase().replace(/\s/g, '') === CHECKIN_CODE.toLowerCase()) { document.getElementById('codeInput').value = ''; scanSuccess(); }
+  else { scanMsg.textContent = 'รหัสไม่ถูกต้อง ตรวจสอบรหัสที่แสดงใต้ QR ในห้องประชุม'; scanMsg.className = 'scan-msg err'; }
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && scanner.classList.contains('show')) stopScan(); });
 
 undoLink.addEventListener('click', () => {
   if (!selected || !isGasConfigured) return;
@@ -652,7 +738,7 @@ undoLink.addEventListener('click', () => {
     body: JSON.stringify({ action: 'delete', no: keyOf(selected[0]) })
   }).finally(() => {
     signBtn.disabled = false;
-    signBtn.textContent = 'ลงชื่อเข้าร่วมประชุม';
+    signBtn.textContent = BTN_LABEL();
     undoLink.style.display = 'none';
     stampFlash.innerHTML = '';
     delete currentRecords[selected[0]];
