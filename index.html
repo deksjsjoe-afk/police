@@ -244,6 +244,22 @@
   .browse-row .bno { color: var(--ink-soft); font-size: 12px; width: 22px; flex-shrink: 0; }
   .browse-row .brk { color: var(--ink-soft); font-size: 12.5px; white-space: nowrap; flex-shrink: 0; }
   .browse-row .bnm { flex: 1; }
+
+  .sum-head { display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:0.6rem; }
+  .sum-head .big { font-size:22px; font-weight:600; color:var(--stamp-red); }
+  .sum-head .sm { font-size:12.5px; color:var(--ink-soft); }
+  .sum-grp { border:1px solid var(--line); border-radius:10px; margin-top:0.6rem; overflow:hidden; background:#fffdf9; }
+  .sum-gh { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:9px 12px; font-size:14px; font-weight:600; color:var(--navy); background:#f4efe1; }
+  .sum-gh .cnt { font-size:12.5px; font-weight:500; color:var(--ink-soft); white-space:nowrap; }
+  .sum-gh.done { background:var(--ok-green-bg); color:var(--ok-green); }
+  .sum-gh.done .cnt { color:var(--ok-green); }
+  .sum-miss { padding:6px 12px 8px; display:flex; flex-direction:column; gap:3px; }
+  .sum-miss div { font-size:13.5px; display:flex; gap:8px; }
+  .sum-miss .rk { color:var(--ink-soft); font-size:12.5px; white-space:nowrap; }
+  .sum-only { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ink-soft); margin-bottom:2px; cursor:pointer; }
+  .ok-mark { color:var(--ok-green); font-weight:700; margin-left:4px; }
+  .sum-miss .gone { color:var(--ink-soft); }
+  .sum-note { font-size:11.5px; color:var(--ink-soft); margin:0.8rem 0 0; line-height:1.5; }
 </style>
 </head>
 <body>
@@ -304,6 +320,18 @@
     <h2>รายชื่อผู้ลงทะเบียนแล้ว</h2>
     <div id="attList"><div class="empty-note">ยังไม่มีผู้ลงทะเบียน</div></div>
     <button class="sign-btn" id="exportBtn" style="margin-top:1rem; background:var(--gold);">ดาวน์โหลดรายชื่อ (CSV)</button>
+  </div>
+
+  <div class="card" id="sumCard">
+    <h2>สรุปผู้ยังไม่ลงชื่อ</h2>
+    <div class="browse-tabs">
+      <button class="tab-btn active" data-sum="tambon" type="button">ตามสายตรวจตำบล</button>
+      <button class="tab-btn" data-sum="call" type="button">ตามสายงาน</button>
+    </div>
+    <div class="sum-head"><span class="big" id="sumMissing">-</span><span class="sm" id="sumTotal"></span></div>
+    <label class="sum-only"><input type="checkbox" id="sumOnly"> แสดงเฉพาะผู้ที่ยังไม่ลงชื่อ</label>
+    <div id="sumBody"></div>
+    <p class="sum-note" id="sumNote"></p>
   </div>
 
 </div>
@@ -430,7 +458,7 @@ function renderSuggestions(list) {
   list.slice(0, 8).forEach((o, i) => {
     const div = document.createElement('div');
     div.className = 'sugg-item' + (i === activeIdx ? ' active' : '');
-    div.innerHTML = '<span class="rk">' + o[1] + '</span><span class="nm">' + o[2] + '</span>';
+    div.innerHTML = '<span class="rk">' + o[1] + '</span><span class="nm">' + o[2] + (currentRecords[o[0]] ? '<span class="ok-mark">&#10003;</span>' : '') + '</span>';
     div.onclick = () => selectOfficer(o);
     suggestions.appendChild(div);
   });
@@ -486,7 +514,7 @@ tabBtns.forEach(btn => {
 function renderBrowseList() {
   const list = OFFICERS.filter(o => currentGroup === 'officer' ? isOfficerRank(o[1]) : !isOfficerRank(o[1]));
   browseList.innerHTML = list.map(o =>
-    '<div class="browse-row" data-no="' + o[0] + '"><span class="bno">' + o[0] + '</span><span class="brk">' + o[1] + '</span><span class="bnm">' + o[2] + '</span></div>'
+    '<div class="browse-row" data-no="' + o[0] + '"><span class="bno">' + o[0] + '</span><span class="brk">' + o[1] + '</span><span class="bnm">' + o[2] + (currentRecords[o[0]] ? '<span class="ok-mark">&#10003;</span>' : '') + '</span></div>'
   ).join('');
   browseList.querySelectorAll('.browse-row').forEach(row => {
     row.addEventListener('click', () => {
@@ -573,6 +601,50 @@ undoLink.addEventListener('click', () => {
   });
 });
 
+
+/* ===== สรุปผู้ยังไม่ลงชื่อ ===== */
+const TAMBON = {"แคมป์สน": ["ถิรธนา ศรีมังกร", "ปฏิภาณ ทองแพง", "อุกฤษฎ์ สายคำพวน", "วสุพล ผลจันทร์"], "เข็กน้อย": ["เดชาพัชร ตาแล", "พงศกร ศรีสายคำ", "ธนะชัย เอมเอี่ยม", "พีระพงศ์ หาพา"], "ทุ่งสมอ": ["ศักดิ์ดา พิมพ์สวัสดิ์", "ชุติพนธ์ ทองนาค", "ศุภกร ธรรมวงษ์"], "หนองแม่นา": ["ชัยนาฤทธิ์ คนหาญ", "จรูญ อินเอี่ยม", "ลินล่า สุจิมงคล"], "สะเดาะพง": ["นรินทร์ ศรีมรกตมงคล", "กลวัชร บัวจันทร์", "ปิยะพงษ์ เสาธง"], "เขาค้อ": ["วชิระ รอดแตง", "เสกสรร ผุยเพชร", "อนุวัฒน์ ชาววิวัฒน์"]};
+const CALL_NAMES = { '๑':'ผู้กำกับ', '๒':'ป้องกันปราบปราม', '๓':'สอบสวน', '๔':'สืบสวน', '๕':'อำนวยการ', '๖':'' };
+let sumMode = 'tambon';
+function officerByName(n) { return OFFICERS.find(o => o[2] === n); }
+function renderSummary() {
+  const body = document.getElementById('sumBody'); if (!body) return;
+  let groups = [];
+  if (sumMode === 'tambon') {
+    groups = Object.keys(TAMBON).map(k => ({ title: 'สายตรวจตำบล' + k, list: TAMBON[k].map(officerByName).filter(Boolean) }));
+  } else {
+    const map = {};
+    OFFICERS.forEach(o => {
+      const m = String(o[4]).match(/เขาค้อ\s*([๐-๙])/); const d = m ? m[1] : '?';
+      (map[d] = map[d] || []).push(o);
+    });
+    groups = Object.keys(map).sort().map(d => ({ title: d === '?' ? 'ยังไม่มีนามเรียกขาน' : (d === '๑' ? 'ผู้กำกับการ (เขาค้อ ๑)' : (CALL_NAMES[d] ? 'สายงาน' + CALL_NAMES[d] + ' (เขาค้อ ' + d + ')' : 'เขาค้อ ' + d)), list: map[d] }));
+  }
+  const onlyMiss = document.getElementById('sumOnly').checked;
+  let missTotal = 0, all = 0;
+  body.innerHTML = groups.map(g => {
+    const absent = g.list.filter(o => !currentRecords[o[0]]);
+    missTotal += absent.length; all += g.list.length;
+    const done = absent.length === 0;
+    return '<div class="sum-grp"><div class="sum-gh' + (done ? ' done' : '') + '"><span>' + g.title + '</span><span class="cnt">' +
+      (done ? '&#10003; ครบแล้ว ' : 'ลงชื่อแล้ว ') + (g.list.length - absent.length) + '/' + g.list.length + '</span></div>' +
+      '<div class="sum-miss">' + g.list.filter(o => !onlyMiss || !currentRecords[o[0]]).map(o => {
+        const ok = !!currentRecords[o[0]];
+        return '<div><span class="rk">' + o[1] + '</span><span' + (ok ? ' class="gone"' : '') + '>' + o[2] + (ok ? '<span class="ok-mark" aria-label="ลงชื่อแล้ว">&#10003;</span>' : '') + '</span></div>';
+      }).join('') + '</div></div>';
+  }).join('');
+  document.getElementById('sumMissing').textContent = 'ยังไม่ลงชื่อ ' + missTotal + ' นาย';
+  document.getElementById('sumTotal').textContent = 'จาก ' + all + ' นาย';
+  document.getElementById('sumNote').textContent = sumMode === 'tambon'
+    ? 'จัดตามคำสั่งปฏิบัติหน้าที่สายตรวจประจำตำบล เฉพาะผู้ที่ได้รับมอบหมายสายตรวจตำบล  ✓ = ลงชื่อแล้ว'
+    : 'จัดตามสายงาน โดยใช้เลขนามเรียกขาน (เขาค้อ ๑-๖) ของแต่ละนาย  ✓ = ลงชื่อแล้ว';
+}
+document.getElementById('sumOnly').addEventListener('change', renderSummary);
+document.querySelectorAll('[data-sum]').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('[data-sum]').forEach(x => x.classList.toggle('active', x === b));
+  sumMode = b.dataset.sum; renderSummary();
+}));
+
 function renderAttendance() {
   const records = Object.values(currentRecords).sort((a, b) => parseInt(a.no) - parseInt(b.no));
   countNum.textContent = records.length;
@@ -584,6 +656,8 @@ function renderAttendance() {
       '<div class="att-row"><span class="chk">&#10003;</span><span class="nm">' + r.rank + ' ' + r.name + '</span><span class="tm">' + fmtTime(r.time) + '</span></div>'
     ).join('');
   }
+  renderSummary();
+  if (browsePanel.classList.contains('show')) renderBrowseList();
   if (selected) checkIfSigned(selected[0]);
 }
 
